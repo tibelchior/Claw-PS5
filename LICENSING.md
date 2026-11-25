@@ -28,6 +28,6 @@ That covers only what the port's authors wrote. Everything below belongs to its 
 
 ## Releases
 
-A release zip (`tools/release.sh`) holds a built `eboot.bin`, OpenClaw's own assets and the config, but none of the CD's content. It links the GPL-3.0
+A release zip (`tools/package-release.sh`) holds a built `eboot.bin`, OpenClaw's own assets and the config, but none of the CD's content. It links the GPL-3.0
 platform layer, whose source is the PS5_PayloadSDK project linked above, and OpenClaw, whose source is this repository's pinned commit plus
 `ps5/openclaw/`. If a rights holder objects to the release or to the artwork, it is withdrawn.

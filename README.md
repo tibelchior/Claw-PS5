@@ -58,7 +58,7 @@ Options: `GAME_DIR=<folder>` (default `./game-files`), `BUILD_VOLUME=<docker vol
 DiRT/Motorhead/UT99 ports; a new name builds a separate toolchain). All upstream revisions are pinned in
 [`tools/pins.env`](tools/pins.env). Artwork: `art/icon.png` (1000x1000) and `art/wallpaper.png` (2752x1536).
 
-Result: `dist/PPSA99782/`. To share a build without any CD content: `tools/release.sh` makes `dist/release/Claw-PS5-<date>.zip`.
+Result: `dist/PPSA99782/`. For a release zip without any CD content: `tools/package-release.sh 1.0.0` makes `dist/Claw-PS5-v1.0.0.zip`.
 
 ## Install
 Copy `dist/PPSA99782` to `/data/homebrew/PPSA99782` on the console and rescan with ShadowMountPlus.
@@ -118,6 +118,7 @@ build.sh                       entry point (Docker)
 tools/pins.env                 pinned upstream revisions, title id
 tools/container/*.sh           steps that run inside the container (toolchain, sdl2, libs, sources, compile, title, package)
 tools/apply-openclaw.sh        pinned OpenClaw + patch + overlay
+tools/package-release.sh       release zip (title only)
 tools/extract_fec.py           splits CLAW.FEC into its Smacker movies
 tools/make_config.py           the port's config.xml
 tools/host/                    Linux host test
