@@ -1,12 +1,16 @@
-# Which cutscene (movieNN.smk from CLAW.FEC) plays when. Best guess from the pictures: edit freely.
-#   startup N     once, when the game starts (movie 0 is the CLAW logo)
-#   level L N     when level L is started from the menu (not after dying); level 1 = the intro story (movie 1)
-# Movies 8..11 (big CLAW map, ship at night, two black fades) are probably the ending/credits: unassigned for now.
-startup 0
-level 1 1
-level 3 2
-level 5 3
-level 6 4
-level 7 5
-level 11 6
-level 13 7
+# Which cutscene (movieNN.smk from CLAW.FEC) plays when. Edit freely; no rebuild needed (Claw/MOVIES/movies.txt).
+#   startup N     once, when the game starts
+#   level L N     when level L is started (not after dying)
+#   end N         after the last level is finished, in this order
+# Worked out from the pictures: the story clips follow the original's two-levels-per-act rhythm (a scene after each even level).
+startup 0          # Monolith logo
+level 1 1          # intro: the sea battle, La Roca prison, the letter
+level 3 2          # escape from La Roca
+level 5 3          # through the woods to the town
+level 7 4          # Calico's tavern
+level 9 5          # boarding the ship at night
+level 11 6         # the caves, the gems and the map
+level 13 7         # out of the caves, the island temple
+end 8              # duel on the beach (belongs before level 14, which OpenClaw does not have)
+end 9              # the ending: the amulet
+# movie 10 is a promotional trailer, movie 11 a 3 second shot of the ship: not part of the story

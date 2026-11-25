@@ -9,6 +9,7 @@
 // Space / Enter / Escape. Which movie plays when is given by <AssetsFolder>MOVIES/movies.txt:
 //     startup <N>          shown once when the game starts
 //     level <L> <N>        shown when level L starts from the menu (not after dying); level 1 is the intro
+//     end <N>              shown, in file order, after the last implemented level is finished
 // Without that file the built-in defaults are used. Missing movie files are skipped silently.
 //---------------------------------------------------------------------------------------------------------------------
 namespace Movies
@@ -19,6 +20,7 @@ namespace Movies
 
     void OnStartup();
     void OnLevelStart(int levelNumber, bool isRestart);
+    void OnGameEnd();
 }
 
 #endif

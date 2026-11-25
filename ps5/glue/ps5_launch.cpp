@@ -264,6 +264,13 @@ extern "C" int __wrap_main(int argc, char **argv) {
             std::fclose(f);
             std::fprintf(stderr, "[ps5-launch] debug.txt: level '%s', %zu bytes of commands\n", level.c_str(), commands.size());
         }
+        // There is no level 14 in OpenClaw: asking for it shows the ending videos (movies.txt "end" lines) and the menu.
+        if (level == "14") {
+            std::fprintf(stderr, "[ps5-launch] debug.txt: level 14 = play the ending videos\n");
+            setenv("CLAW_PLAY_ENDING", "1", 1);
+            level.clear();
+            commands.clear();
+        }
         if (!level.empty()) {
             std::string cfg;
             if (FILE *f = std::fopen((cfgdir + "/config.xml").c_str(), "rb")) {

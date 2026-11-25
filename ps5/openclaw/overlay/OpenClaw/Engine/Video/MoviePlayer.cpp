@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -114,7 +115,8 @@ namespace
         unsigned char palette[256 * 3];
     };
 
-    std::map<int, int> g_LevelMovies = { {1, 1}, {3, 2}, {5, 3}, {6, 4}, {7, 5}, {11, 6}, {13, 7} };
+    std::map<int, int> g_LevelMovies = { {1, 1}, {3, 2}, {5, 3}, {7, 4}, {9, 5}, {11, 6}, {13, 7} };
+    std::vector<int> g_EndMovies = { 8, 9 };
     int g_StartupMovie = 0;
     bool g_ConfigLoaded = false;
     bool g_StartupPlayed = false;
@@ -137,6 +139,8 @@ namespace
             return;
         }
         g_LevelMovies.clear();
+        // The ending keeps its built-in list unless the file has "end" lines (an older movies.txt has none)
+        bool endListed = false;
         g_StartupMovie = -1;
         char line[256];
         while (fgets(line, sizeof line, f))
@@ -149,6 +153,15 @@ namespace
             else if (sscanf(line, "level %d %d", &a, &b) == 2)
             {
                 g_LevelMovies[a] = b;
+            }
+            else if (sscanf(line, "end %d", &a) == 1)
+            {
+                if (!endListed)
+                {
+                    g_EndMovies.clear();
+                    endListed = true;
+                }
+                g_EndMovies.push_back(a);
             }
         }
         fclose(f);
@@ -392,6 +405,12 @@ void OnStartup()
         return;
     }
     g_StartupPlayed = true;
+    // Test helper ("level 14" in the port's debug.txt): show the ending videos instead of the logo, then the menu
+    if (getenv("CLAW_PLAY_ENDING"))
+    {
+        OnGameEnd();
+        return;
+    }
     if (g_StartupMovie >= 0)
     {
         PlayIndex(g_StartupMovie);
@@ -409,6 +428,16 @@ void OnLevelStart(int levelNumber, bool isRestart)
     if (it != g_LevelMovies.end())
     {
         PlayIndex(it->second);
+    }
+}
+
+void OnGameEnd()
+{
+    LoadConfig();
+    LOG("[Movies] ending: " + std::to_string(g_EndMovies.size()) + " videos");
+    for (int index : g_EndMovies)
+    {
+        PlayIndex(index);
     }
 }
 

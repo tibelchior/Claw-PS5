@@ -216,3 +216,20 @@ index 1d67a1e..7d11eca 100644
  
      int m_HumanPlayersAttached;
      int m_HumanGamesLoaded;
+diff --git a/OpenClaw/Engine/UserInterface/HumanView.cpp b/OpenClaw/Engine/UserInterface/HumanView.cpp
+index ec64d79..c50c687 100644
+--- a/OpenClaw/Engine/UserInterface/HumanView.cpp
++++ b/OpenClaw/Engine/UserInterface/HumanView.cpp
+@@ -1,3 +1,4 @@
++#include "../Video/MoviePlayer.h"
+ #include "HumanView.h"
+ #include "../GameApp/BaseGameApp.h"
+ #include "../GameApp/BaseGameLogic.h"
+@@ -681,6 +682,7 @@ void HumanView::LoadGameDelegate(IEventDataPtr pEventData)
+         // Go to menu after finishing last implemented level
+         if (levelNumber > g_pApp->GetDebugOptions()->lastImplementedLevel)
+         {
++            Movies::OnGameEnd();
+             IEventMgr::Get()->VQueueEvent(IEventDataPtr(new EventData_Enter_Menu()));
+         }
+         else

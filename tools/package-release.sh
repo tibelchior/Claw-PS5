@@ -31,6 +31,37 @@ Copy these from your own Captain Claw CD into this folder:
   MOVIES/CLAW.FEC     ->  split into MOVIES/      (cutscenes), on your computer, from this folder:
                           python3 extract_fec.py /path/to/CD/MOVIES/CLAW.FEC MOVIES
                           (gives MOVIES/movie00.smk ... movie11.smk)
+
+When done, this folder should look like this:
+
+PPSA99782/Claw/
+├── CLAW.REZ              (from your CD: DATA/CLAW.REZ)
+├── ASSETS.ZIP            (in the release)
+├── SAVES.XML             (in the release)
+├── clacon.ttf            (in the release)
+├── console02.tga         (in the release)
+├── PUT_THE_GAME_FILES_HERE.txt   (this note)
+├── extract_fec.py        (in the release, only needed to split the movies)
+├── MOVIES/
+│   ├── movies.txt        (in the release)
+│   ├── movie00.smk       (movie00 to movie11: split from your CD's MOVIES/CLAW.FEC)
+│   ├── movie01.smk
+│   ├── movie02.smk
+│   ├── movie03.smk
+│   ├── movie04.smk
+│   ├── movie05.smk
+│   ├── movie06.smk
+│   ├── movie07.smk
+│   ├── movie08.smk
+│   ├── movie09.smk
+│   ├── movie10.smk
+│   └── movie11.smk
+└── MUSIC/
+    ├── CLAW4.SF2         (from your CD: MUSIC/CLAW4.SF2)
+    └── CLAW.SF2          (from your CD: MUSIC/CLAW.SF2)
+
+File names must match exactly, including upper and lower case. Without CLAW.REZ the game does not start; without the
+movies there are no cutscenes; without the .SF2 files there is no music.
 TXT
 find "$STAGE" -name .DS_Store -delete
 OUT=$HERE/dist/Claw-PS5-v$VERSION.zip

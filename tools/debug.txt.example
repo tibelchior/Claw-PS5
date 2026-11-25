@@ -1,5 +1,6 @@
 # Copy to <title folder>/data/debug.txt on the console to test (delete the file for normal play).
 # "level N" starts directly in level N (1..13) without the menu; other lines are console commands run at level start.
+# "level 14" does not exist in OpenClaw: it plays the two ending videos and then shows the menu.
 level 5
 invincible on
 infinitejump on
