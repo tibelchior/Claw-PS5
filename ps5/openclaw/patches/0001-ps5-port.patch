@@ -1,0 +1,218 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 327fc5e..e0bfd99 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,6 +21,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g")
+ add_subdirectory(Box2D)
+ add_subdirectory(libwap)
+ add_subdirectory(./ThirdParty/Tinyxml)
++# Smacker video decoder (LGPL 2.1), used for the original game's cutscenes
++add_library(smacker STATIC ./ThirdParty/libsmacker/smacker.c)
++target_compile_options(smacker PRIVATE -w)
++include_directories(./ThirdParty/libsmacker/)
+ if (WIN32)
+     add_subdirectory(MidiProc)
+ endif (WIN32)
+@@ -67,6 +71,7 @@ list(APPEND TARGET_LIBS
+     libwap
+     tinyxml
+     Box2D
++    smacker
+ )
+ if (Emscripten)
+     if (Extern_Config)
+diff --git a/OpenClaw/ClawGameLogic.cpp b/OpenClaw/ClawGameLogic.cpp
+index 2f7a5f4..cdb08d5 100644
+--- a/OpenClaw/ClawGameLogic.cpp
++++ b/OpenClaw/ClawGameLogic.cpp
+@@ -417,6 +417,7 @@ void ClawGameLogic::CheckpointReachedDelegate(IEventDataPtr pEventData)
+ void ClawGameLogic::ClawDiedDelegate(IEventDataPtr pEventData)
+ {
+     shared_ptr<EventData_Claw_Died> pCastEventData = static_pointer_cast<EventData_Claw_Died>(pEventData);
++    LOG("[Claw] died, lives left " + ToStr(pCastEventData->GetRemainingLives()));
+ 
+     StrongActorPtr pActor = MakeStrongPtr(VGetActor(pCastEventData->GetActorId()));
+     if (!pActor)
+diff --git a/OpenClaw/Engine/Actor/Components/ControllableComponent.cpp b/OpenClaw/Engine/Actor/Components/ControllableComponent.cpp
+index a131374..d5b41e1 100644
+--- a/OpenClaw/Engine/Actor/Components/ControllableComponent.cpp
++++ b/OpenClaw/Engine/Actor/Components/ControllableComponent.cpp
+@@ -972,6 +972,7 @@ void ClawControllableComponent::VOnAnimationLooped(Animation* pAnimation)
+     std::string animName = pAnimation->GetName();
+     if (pAnimation->GetName().find("death") != std::string::npos)
+     {
++        LOG("[Claw] death animation " + animName + " finished, claw dies");
+         shared_ptr<LifeComponent> pClawLifeComponent = MakeStrongPtr(m_pOwner->GetComponent<LifeComponent>());
+         assert(pClawLifeComponent != nullptr);
+ 
+@@ -1013,6 +1014,7 @@ bool ClawControllableComponent::IsAttackingOrShooting()
+ 
+ void ClawControllableComponent::VOnHealthBelowZero(DamageType damageType, int sourceActorId)
+ {
++    LOG("[Claw] health below zero, state " + ToStr((int)m_State) + ", damage type " + ToStr((int)damageType));
+     if (m_State == ClawState_Dying)
+     {
+         return;
+diff --git a/OpenClaw/Engine/Actor/Components/EnemyAI/EnemyAIStateComponent.cpp b/OpenClaw/Engine/Actor/Components/EnemyAI/EnemyAIStateComponent.cpp
+index 5520bba..3edaf5e 100644
+--- a/OpenClaw/Engine/Actor/Components/EnemyAI/EnemyAIStateComponent.cpp
++++ b/OpenClaw/Engine/Actor/Components/EnemyAI/EnemyAIStateComponent.cpp
+@@ -1182,7 +1182,16 @@ bool BaseAttackAIStateComponent::VCanEnter()
+     // Since the first found actor is picked
+ 
+     // TODO: Revisit this if enemy ever has more than one attack action per AttackAIStateComponent
+-    EnemyAttackAction& action = *m_AttackActions[m_CurrentAttackActionIdx];
++    // The index is advanced after every attack and can sit one past the end here (reading the vector out of bounds crashed
++    // on the PS5): fall back to the first action
++    size_t attackIdx = (m_CurrentAttackActionIdx >= 0 && (size_t)m_CurrentAttackActionIdx < m_AttackActions.size()) ? (size_t)m_CurrentAttackActionIdx : 0;
++    EnemyAttackAction& action = *m_AttackActions[attackIdx];
++
++    // The agro target may be gone (Claw destroyed while dying / level restart)
++    if (!m_EnemyAgroList[0] || !m_EnemyAgroList[0]->GetPositionComponent() || !m_pOwner->GetPositionComponent())
++    {
++        return false;
++    }
+ 
+     // Check if enemy is within line of sight
+     Point fromPoint = m_pOwner->GetPositionComponent()->GetPosition() + action.agroSensorFixture.offset;
+diff --git a/OpenClaw/Engine/Audio/Audio.cpp b/OpenClaw/Engine/Audio/Audio.cpp
+index 97c8d19..dc0c016 100644
+--- a/OpenClaw/Engine/Audio/Audio.cpp
++++ b/OpenClaw/Engine/Audio/Audio.cpp
+@@ -3,6 +3,7 @@
+ #include <vector>
+ 
+ #include "Audio.h"
++#include "MidiSynth.h"
+ #include "../Events/EventMgr.h"
+ #include "../Events/Events.h"
+ 
+@@ -155,6 +156,15 @@ static int SetupPlayMusicThread(void* pData)
+     }
+     RpcEndExcept;
+ #else
++    if (MidiSynth::Play(pMusicInfo->pMusicData, pMusicInfo->musicSize, pMusicInfo->looping, pMusicInfo->musicVolume < 0 ? 0 : pMusicInfo->musicVolume))
++    {
++        if (pMusicInfo->musicVolume == -1)
++        {
++            MidiSynth::Pause();
++        }
++        SAFE_DELETE(pMusicInfo);
++        return 0;
++    }
+     SDL_RWops* pRWops = SDL_RWFromMem((void*)pMusicInfo->pMusicData, pMusicInfo->musicSize);
+     Mix_Music* pMusic = Mix_LoadMUS_RW(pRWops, 0);
+     if (!pMusic) {
+@@ -199,6 +209,7 @@ void Audio::PauseMusic()
+     }
+     RpcEndExcept
+ #else
++    MidiSynth::Pause();
+     Mix_PauseMusic();
+ #endif //_WIN32
+ }
+@@ -217,6 +228,7 @@ void Audio::ResumeMusic()
+     }
+     RpcEndExcept
+ #else
++    MidiSynth::Resume();
+     Mix_ResumeMusic();
+ #endif //_WIN32
+ }
+@@ -234,6 +246,7 @@ void Audio::StopMusic()
+     }
+     RpcEndExcept
+ #else
++    MidiSynth::Stop();
+     Mix_HaltMusic();
+ #endif //_WIN32
+ }
+@@ -259,6 +272,7 @@ void Audio::SetMusicVolume(int volumePercentage)
+     }
+     RpcEndExcept
+ #else
++    MidiSynth::SetVolume(m_MusicVolume);
+     Mix_VolumeMusic(m_MusicVolume);
+ #endif //_WIN32
+ }
+diff --git a/OpenClaw/Engine/Audio/CMakeLists.txt b/OpenClaw/Engine/Audio/CMakeLists.txt
+index fca5794..12f90f2 100644
+--- a/OpenClaw/Engine/Audio/CMakeLists.txt
++++ b/OpenClaw/Engine/Audio/CMakeLists.txt
+@@ -4,6 +4,8 @@ target_sources(openclaw
+     PRIVATE
+     ${CMAKE_CURRENT_SOURCE_DIR}/Audio.h
+     ${CMAKE_CURRENT_SOURCE_DIR}/Audio.cpp
++    ${CMAKE_CURRENT_SOURCE_DIR}/MidiSynth.h
++    ${CMAKE_CURRENT_SOURCE_DIR}/MidiSynth.cpp
+ )
+ 
+ if (WIN32)
+diff --git a/OpenClaw/Engine/CMakeLists.txt b/OpenClaw/Engine/CMakeLists.txt
+index bd2f5f6..e7a2429 100644
+--- a/OpenClaw/Engine/CMakeLists.txt
++++ b/OpenClaw/Engine/CMakeLists.txt
+@@ -21,3 +21,4 @@ add_subdirectory(Resource)
+ add_subdirectory(Scene)
+ add_subdirectory(UserInterface)
+ add_subdirectory(Util)
++add_subdirectory(Video)
+diff --git a/OpenClaw/Engine/GameApp/BaseGameLogic.cpp b/OpenClaw/Engine/GameApp/BaseGameLogic.cpp
+index 5d8dc7d..5173527 100644
+--- a/OpenClaw/Engine/GameApp/BaseGameLogic.cpp
++++ b/OpenClaw/Engine/GameApp/BaseGameLogic.cpp
+@@ -1,3 +1,4 @@
++#include "../Video/MoviePlayer.h"
+ #include "../Actor/ActorFactory.h"
+ #include "../UserInterface/HumanView.h"
+ #include "../Events/Events.h"
+@@ -760,6 +761,7 @@ void BaseGameLogic::VOnUpdate(uint32 msDiff)
+             }
+             else
+             {
++                Movies::OnStartup();
+                 VChangeState(GameState_Menu);
+             }
+ #endif
+@@ -883,6 +885,10 @@ void BaseGameLogic::VChangeState(GameState newState)
+         int levelNumber = m_pCurrentLevel->GetLevelNumber();
+         assert(levelNumber >= 0 && levelNumber <= 14);
+ 
++        // Story cutscenes (not when the level is only restarted after dying)
++        Movies::OnLevelStart(levelNumber, m_bRestartingLevel);
++        m_bRestartingLevel = false;
++
+         std::string levelName = "LEVEL" + ToStr(levelNumber);
+         std::string wwdLevelPath = "/" + levelName + "/WORLDS/WORLD.WWD";
+ 
+@@ -1274,6 +1280,7 @@ void BaseGameLogic::VResetLevel()
+     m_pPhysics.reset(CreateClawPhysics());
+ 
+     // Load new level
++    m_bRestartingLevel = true;
+     VChangeState(GameState_LoadingLevel);
+ }
+ 
+@@ -1311,7 +1318,9 @@ void BaseGameLogic::RemoveAllDelegates()
+ 
+ void BaseGameLogic::ExecuteStartupCommands(const std::string& startupCommandsFile)
+ {
+-    std::ifstream commandsFile(startupCommandsFile);
++    // The PS5 port cannot chdir: its launcher points to the commands file by environment variable
++    const char* envCommandsFile = getenv("CLAW_STARTUP_COMMANDS");
++    std::ifstream commandsFile(envCommandsFile ? envCommandsFile : startupCommandsFile.c_str());
+     if (commandsFile.is_open())
+     {
+         std::string line;
+diff --git a/OpenClaw/Engine/GameApp/BaseGameLogic.h b/OpenClaw/Engine/GameApp/BaseGameLogic.h
+index 1d67a1e..7d11eca 100644
+--- a/OpenClaw/Engine/GameApp/BaseGameLogic.h
++++ b/OpenClaw/Engine/GameApp/BaseGameLogic.h
+@@ -115,6 +115,7 @@ protected:
+     ActorMap m_ActorMap;
+     uint32 m_LastActorId;
+     GameState m_GameState;
++    bool m_bRestartingLevel = false;
+ 
+     int m_HumanPlayersAttached;
+     int m_HumanGamesLoaded;

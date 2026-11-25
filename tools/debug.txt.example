@@ -1,0 +1,7 @@
+# Copy to <title folder>/data/debug.txt on the console to test (delete the file for normal play).
+# "level N" starts directly in level N (1..13) without the menu; other lines are console commands run at level start.
+level 5
+invincible on
+infinitejump on
+# catnip / firesword / frostsword / lightningsword / invulnerable / invisible give 30 s powerups
+# teleport 12600 4100

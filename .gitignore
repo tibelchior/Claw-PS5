@@ -1,0 +1,6 @@
+# build output, downloaded/fetched sources and your own game files never go into the repository
+dist/
+work/
+game-files/
+*.log
+.DS_Store

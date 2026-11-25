@@ -1,0 +1,2 @@
+FROM fedora:43
+RUN dnf install -y git gcc-c++ cmake make ninja-build gdb zip SDL2-devel SDL2_image-devel SDL2_mixer-devel SDL2_ttf-devel SDL2_gfx-devel && dnf clean all
